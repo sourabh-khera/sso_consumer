@@ -1,7 +1,5 @@
 const Mongoose = require('mongoose');
-
-const dbString = 'mongodb://localhost/session_db';
-const connection = Mongoose.createConnection(dbString);
+const connection = require('./dbConnector');
 
 const sessionSchema = new Mongoose.Schema({
   expires: {

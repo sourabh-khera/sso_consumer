@@ -7,10 +7,10 @@ const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo')(session);
 
 const sessionModel = require('./models/sessionSchema');
+const connection = require('./models/dbConnector');
+
 const app = express();
 
-const dbString = 'mongodb://localhost/session_db';
-const connection = mongoose.createConnection(dbString);
 const sessionStore = new MongoStore({
   mongooseConnection: connection,
   collection: 'sessions',
@@ -30,12 +30,13 @@ app.use(session({
 }));
 
 const axiosInstance = axios.create({ baseURL: 'http://localhost:4000'});
+const redirectUrl = 'http://localhost:3000';
+const ssoURL = 'http://localhost:4000/simplesso/login?serviceURL=';
 
 const isAuthenticated = (req, res, next) => {
   if (req.path !== '/ssoRedirect') {
-    const redirectUrl = 'http://localhost:3000';
     if (!req.session.user) {
-      return res.redirect(`http://localhost:4000/simplesso/login?serviceURL=${redirectUrl}`);
+      return res.redirect(`${ssoURL}${redirectUrl}`);
     }
   }
   next();
@@ -63,6 +64,7 @@ const ssoRedirect = async (req, res, next) => {
   }
   catch (err) {
     console.log(err);
+    res.status(422).send({message: 'Something went wrong, please try again later.'})
   }
 }
 
@@ -76,11 +78,14 @@ app.get('/', (req, res) => {
 
 app.get('/logout', (req, res) => {
    deleteSessions(req.session.user.username)
-   .then(res => {
-     console.log(res)
+   .then(response => {
+     if(response.deletedCount > 0) {
+      return res.redirect(`${ssoURL}${redirectUrl}`);
+     }
    })
    .catch(err => {
      console.log(err);
+     res.status(422).send({message: 'Something went wrong, please try again later.'})
    })
 });
 
