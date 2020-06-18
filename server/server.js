@@ -6,13 +6,15 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo')(session);
 
+const sessionModel = require('./models/sessionSchema');
 const app = express();
 
 const dbString = 'mongodb://localhost/session_db';
 const connection = mongoose.createConnection(dbString);
 const sessionStore = new MongoStore({
   mongooseConnection: connection,
-  collection: 'sessions_consumer1'
+  collection: 'sessions',
+  stringify: false,
 });
 
 app.use(cors());
@@ -71,6 +73,27 @@ app.use('/ssoRedirect', ssoRedirect);
 app.get('/', (req, res) => {
  res.status(200).send(req.session.user);
 });
+
+app.get('/logout', (req, res) => {
+   deleteSessions(req.session.user.username)
+   .then(res => {
+     console.log(res)
+   })
+   .catch(err => {
+     console.log(err);
+   })
+});
+
+const deleteSessions = (username) => {
+  return new Promise((resolve, reject) => {
+    sessionModel.remove({"session.user.username": username}, (err, data)=>{
+      if(err){
+        reject(err)
+      }
+      resolve(data);
+    }) 
+  })
+}
 
 app.listen(3000, () => console.log('server listening on port 3000'));
 module.exports = app;
